@@ -3,6 +3,8 @@ import asyncio
 from util.logger import Logger
 from message_director.participant import Participant
 from util.datagram import Datagram
+from util.datagram_iterator import DatagramIterator
+from net.message_types import *
 
 
 class ClientAgent:
@@ -21,6 +23,14 @@ class ClientAgent:
 
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         data = await reader.read(4096)
-        dg = Datagram(data)
         addr = writer.get_extra_info('peername')
+
+        dg = Datagram(data)
+        dgi = DatagramIterator(dg)
+        # Skip the first 2 bytes (message length)
+        dgi.get_bytes(2)
+        
         self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
+        msg_type = dgi.get_uint16()
+        if msg_type == CLIENT_LOGIN:
+            self.logger.info("Got message type CLIENT_LOGIN")
