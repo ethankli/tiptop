@@ -50,5 +50,5 @@ class Datagram:
     def add_bytes(self, data: bytes):
         self.data += data
 
-    def get_data(self) -> bytearray:
+    def get_data(self) -> bytes:
         return self.data
