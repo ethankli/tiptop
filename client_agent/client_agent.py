@@ -33,4 +33,10 @@ class ClientAgent:
         self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
         msg_type = dgi.get_uint16()
         if msg_type == CLIENT_LOGIN:
-            self.logger.info("Got message type CLIENT_LOGIN")
+            self.handle_client_login(dgi, writer)
+        
+    def handle_client_login(self, dgi: DatagramIterator, writer: asyncio.StreamWriter):
+        self.logger.info("Got message type CLIENT_LOGIN")
+        dc_hash = dgi.get_uint32()
+        server_version = dgi.get_string()
+        self.logger.info(f"Got DC Hash: {dc_hash}, server version: {server_version}")
