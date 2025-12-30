@@ -7,6 +7,7 @@ from util.datagram import Datagram
 class DatagramIterator:
     def __init__(self, datagram: Datagram):
         self.data = BytesIO(datagram.get_data())
+        self.get_bytes(2) # remove length flag from buffer
 
     def get_int8(self) -> int:
         raw = self.data.read(1)
