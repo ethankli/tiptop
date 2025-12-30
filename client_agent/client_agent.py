@@ -1,11 +1,13 @@
 import asyncio
 
 from util.logger import Logger
-from message_director.participant import Participant
 from util.datagram import Datagram
 from util.datagram_iterator import DatagramIterator
+
 from net.message_types import *
 from net.channels import *
+
+from message_director.participant import Participant
 
 
 class ClientAgent:

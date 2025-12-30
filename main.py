@@ -9,7 +9,6 @@ async def main():
     md = MessageDirector(host="127.0.0.1", port=6667)
     message_director = await md.start()
 
-
     ca_peer = Participant(host="127.0.0.1", port=6667)
     ca = ClientAgent(host="127.0.0.1", port=7198, participant=ca_peer)
     client_agent = await ca.start()

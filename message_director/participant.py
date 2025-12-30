@@ -1,9 +1,9 @@
 import asyncio
 
 from util.logger import Logger
-from net.message_types import *
-
 from util.datagram import Datagram
+
+from net.message_types import *
 
 
 class Participant:
