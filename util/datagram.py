@@ -2,7 +2,7 @@ import struct
 
 
 class Datagram:
-    def __init__(self, data: bytes = bytes(b'\x00\x00')):
+    def __init__(self, data: bytes = bytes(b"\x00\x00")):
         self.data = bytearray(data)
         self.length = 0
 
@@ -73,7 +73,7 @@ class Datagram:
         self.update_length()
 
     def add_string(self, data: str = ""):
-        encoded = data.encode('utf-8')
+        encoded = data.encode("utf-8")
         self.add_uint16(len(encoded))
         self.data += encoded
         self.update_length()
