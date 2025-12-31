@@ -3,7 +3,11 @@ import struct
 
 class Datagram:
     def __init__(self, data: bytes = bytes()):
-        self.data = bytearray(data)
+        if len(data) == 0:
+            # Reserve first 2 bytes for length field
+            self.data = bytearray(b'\x00\x00')
+        else:
+            self.data = bytearray(data)
         self.length = 0
 
     def update_length(self):
