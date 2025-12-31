@@ -2,6 +2,7 @@ import asyncio
 
 from message_director.message_director import MessageDirector
 from message_director.participant import Participant
+
 from client_agent.client_agent import ClientAgent
 
 

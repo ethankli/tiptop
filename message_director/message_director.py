@@ -33,6 +33,12 @@ class MessageDirector:
             self.logger.info("Got message type CONTROL_SET_CHANNEL")
             self.handle_subscribe(dgi.get_uint64(), writer)
 
+    async def route_message(self, datagram: Datagram, channel: int):
+        if channel in self.subscribers:
+            writer = self.subscribers[channel]
+            writer.write(datagram.get_bytes())
+            await writer.drain()
+
     def handle_subscribe(self, channel: int, writer: asyncio.StreamWriter):
         self.subscribers[channel] = writer
         self.logger.info(f"Registered new subscriber {writer.get_extra_info('peername')} for channel {channel}")
