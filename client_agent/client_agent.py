@@ -21,11 +21,13 @@ class ClientAgent:
         self.ca_channel = ca_channel
         
         self.clients = {}
+        self.next_client_id = 1
 
     async def start(self) -> asyncio.base_events.Server:
         server = await asyncio.start_server(self.handle_connection, self.host, self.port)
         self.logger.info(f"ClientAgent started on {self.host}:{self.port}")
         await self.participant.connect()
+        self.participant.subscribe(self.ca_channel)
         self.logger.info(f"ClientAgent connected to MessageDirector at {self.participant.host}:{self.participant.port}")
         return server
 
@@ -52,7 +54,8 @@ class ClientAgent:
         self.logger.info(f"Got DC hash: {dc_hash}, server version: {server_version}")
         
         # assign a channel for this client
-        client_channel = CLIENT_CHANNEL_BASE + (id(self) & 0xFFFFF)
+        client_channel = CLIENT_CHANNEL_BASE + self.next_client_id
+        self.next_client_id += 1
         # register the client with the ClientAgent
         self.register_client(client_channel, writer)
         # subscribe the client to the MessageDirector
