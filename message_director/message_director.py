@@ -28,10 +28,20 @@ class MessageDirector:
         dg = Datagram(data)
         dgi = DatagramIterator(dg)
 
-        msg_type = dgi.get_uint16()
-        if msg_type == CONTROL_SET_CHANNEL:
-            self.logger.info("Got message type CONTROL_SET_CHANNEL")
-            self.handle_subscribe(dgi.get_uint64(), writer)
+        """
+        internal message routing logic is handled differently than client messages
+        https://www.youtube.com/watch?v=SzybRdxjYoA
+
+        2 bytes (uint16): msg length (not used)
+        1 byte (uint8): count of channels targeted for this message
+        8 bytes (uint64): [] channels targeted
+        8 bytes (uint64): sender channel
+        remaining bytes: payload
+
+        TODO - implement internal message handling logic
+        """
+
+        self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
 
     async def route_message(self, datagram: Datagram, channel: int):
         if channel in self.subscribers:
