@@ -14,6 +14,7 @@ class MessageDirector:
         self.host = host
         self.port = port
 
+        # channel subscriptions: channel_id -> StreamWriter
         self.subscribers = {}
 
     async def start(self) -> asyncio.base_events.Server:
@@ -43,16 +44,57 @@ class MessageDirector:
 
         self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
 
-    async def route_message(self, datagram: Datagram, channel: int):
-        if channel in self.subscribers:
-            writer = self.subscribers[channel]
-            writer.write(datagram.get_bytes())
-            await writer.drain()
+        channels = []
+        channel_count = dgi.get_uint8()
+
+        # retrieve target channels for this message
+        for _ in range(channel_count):
+            channel = dgi.get_uint64()
+            channels.append(channel)
+        
+        if channel_count == 0:
+            self.logger.info("No target channels specified, dropping message")
+            return
+        elif channel_count == 1 and channels[0] == CONTROL_MESSAGE:
+            # message is for us, handle control message
+            self.logger.info("Received control message")
+            return
+
+        # message is not for us, route to subscribers   
+        # fetch all subscribers for the target channels
+        subscribers = self.fetch_subscribers(channels)
+        if not subscribers:
+            self.logger.info("No subscribers for target channels, dropping message")
+            return
+        # create a new datagram with the remaining data    
+        dg = Datagram(dgi.get_data())
+        # send downstream to all subscribers
+        for subscriber in subscribers:
+            subscriber.write(dg.get_data())
+            await subscriber.drain()
+
+    async def route_message(self, datagram: Datagram, channels: list[int]):
+        # send the datagram to all subscribers on the given channels
+        for channel in channels:
+            if channel in self.subscribers:
+                writer = self.subscribers[channel]
+                writer.write(datagram.get_bytes())
+                await writer.drain()
 
     def handle_subscribe(self, channel: int, writer: asyncio.StreamWriter):
+        # register the writer for this channel
         self.subscribers[channel] = writer
         self.logger.info(f"Registered new subscriber {writer.get_extra_info('peername')} for channel {channel}")
 
     def handle_unsubscribe(self, channel: int, writer: asyncio.StreamWriter):
+        # unregister the writer for this channel
         self.subscribers.pop(channel, None)
         self.logger.info(f"Unregistered subscriber {writer.get_extra_info('peername')} from channel {channel}")
+
+    def fetch_subscribers(self, channels: list[int]) -> list[asyncio.StreamWriter]:
+        # get all writers subscribed to the given channels
+        writers = []
+        for channel in channels:
+            if channel in self.subscribers:
+                writers.append(self.subscribers[channel])
+        return writers
