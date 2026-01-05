@@ -11,6 +11,9 @@ A proof-of-concept server emulator for Disney's OTP (Online Theme Park) server, 
 ```bash
 git clone https://github.com/ethankli/tiptop.git
 cd tiptop
+python3 -m venv env
+source ./env/bin/activate
+python ./main.py
 ```
 
 ## Contributing
