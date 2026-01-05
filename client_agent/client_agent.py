@@ -1,5 +1,6 @@
 import asyncio
 import time
+from collections import deque
 
 from util.logger import Logger
 from util.datagram import Datagram
@@ -21,7 +22,8 @@ class ClientAgent:
         self.ca_channel = ca_channel
         
         self.clients = {}
-        self.next_client_id = 1
+        self.next_channel = 1
+        self.free_channels = deque()
 
     async def start(self) -> asyncio.base_events.Server:
         server = await asyncio.start_server(self.handle_connection, self.host, self.port)
@@ -32,21 +34,29 @@ class ClientAgent:
         return server
 
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        data = await reader.read(4096)
-        addr = writer.get_extra_info('peername')
+        try:
+            while True:
+                data = await reader.read(4096)
+                if not data:
+                    self.handle_client_disconnect(writer)
+                    break
+                addr = writer.get_extra_info('peername')
 
-        dg = Datagram(data)
-        dgi = DatagramIterator(dg)
-        
-        self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
-        msg_type = dgi.get_uint16()
-        self.logger.info(f"Received message type: {msg_type}")
-        if msg_type == CLIENT_HEARTBEAT:
-            self.logger.info("Got message type CLIENT_HEARTBEAT")
-            # TODO - handle heartbeat using a watchdog timer
-        elif msg_type == CLIENT_LOGIN:
-            self.handle_client_login(dgi, writer)
-        
+                dg = Datagram(data)
+                dgi = DatagramIterator(dg)
+                
+                self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
+                msg_type = dgi.get_uint16()
+                self.logger.info(f"Received message type: {msg_type}")
+                if msg_type == CLIENT_HEARTBEAT:
+                    self.logger.info("Got message type CLIENT_HEARTBEAT")
+                    # TODO - handle heartbeat using a watchdog timer
+                elif msg_type == CLIENT_LOGIN:
+                    self.handle_client_login(dgi, writer)
+        except Exception as e:
+            self.logger.error(f"Error handling client connection: {e}")
+            self.handle_client_disconnect(writer)
+
     def handle_client_login(self, dgi: DatagramIterator, writer: asyncio.StreamWriter):
         self.logger.info("Got message type CLIENT_LOGIN")
         dc_hash = dgi.get_uint32()
@@ -54,8 +64,7 @@ class ClientAgent:
         self.logger.info(f"Got DC hash: {dc_hash}, server version: {server_version}")
         
         # assign a channel for this client
-        client_channel = CLIENT_CHANNEL_BASE + self.next_client_id
-        self.next_client_id += 1
+        client_channel = self.allocate_channel()
         # register the client with the ClientAgent
         self.register_client(client_channel, writer)
         # subscribe the client to the MessageDirector
@@ -74,6 +83,23 @@ class ClientAgent:
         resp.add_string("YES") # whitelistEnabled
         asyncio.create_task(self.route_message(resp, client_channel))
 
+    def handle_client_disconnect(self, writer: asyncio.StreamWriter):
+        self.logger.info(f"Client {writer.get_extra_info('peername')} disconnected")
+        # find and unregister the client
+        for channel, w in list(self.clients.items()):
+            if w == writer:
+                self.unregister_client(channel, writer)
+        
+    def allocate_channel(self) -> int:
+        if len(self.free_channels) > 0:
+            return self.free_channels.popleft()
+        channel = CLIENT_CHANNEL_BASE + self.next_channel
+        self.next_channel += 1
+        return channel
+
+    def release_channel(self, channel: int):
+        self.free_channels.append(channel)
+
     async def route_message(self, datagram: Datagram, channel: int):
         if channel in self.clients:
             writer = self.clients[channel]
@@ -87,4 +113,6 @@ class ClientAgent:
 
     def unregister_client(self, channel: int, writer: asyncio.StreamWriter):
         self.clients.pop(channel, None)
+        self.participant.unsubscribe(channel)
+        self.release_channel(channel)
         self.logger.info(f"Unregistered client {writer.get_extra_info('peername')} from channel {channel}")
