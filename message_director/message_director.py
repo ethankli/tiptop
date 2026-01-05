@@ -47,8 +47,8 @@ class MessageDirector:
         channels = []
         channel_count = dgi.get_uint8()
 
-        # retrieve target channels for this message
-        for _ in range(channel_count):
+        # retrieve target channels for this message (include sender channel)
+        for _ in range(channel_count + 1):
             channel = dgi.get_uint64()
             channels.append(channel)
         
@@ -58,7 +58,17 @@ class MessageDirector:
         elif channel_count == 1 and channels[0] == CONTROL_MESSAGE:
             # message is for us, handle control message
             self.logger.info("Received control message")
-            return
+            msg_type = dgi.get_uint16()
+            if msg_type == CONTROL_SET_CHANNEL:
+                # subscribe request!
+                sender_channel = channels[1]
+                self.handle_subscribe(sender_channel, writer)
+                return
+            elif msg_type == CONTROL_REMOVE_CHANNEL:
+                # unsubscribe request!
+                sender_channel = channels[1]
+                self.handle_unsubscribe(sender_channel, writer)
+                return
 
         # message is not for us, route to subscribers   
         # fetch all subscribers for the target channels
