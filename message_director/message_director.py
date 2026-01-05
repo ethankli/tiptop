@@ -44,18 +44,20 @@ class MessageDirector:
 
         self.logger.info(f"Received {dg.get_data()!r} from {addr!r}")
 
+        # first channel is the control message channel
+        # the rest are target channels, including the sender channel
         channels = []
         channel_count = dgi.get_uint8()
 
-        # retrieve target channels for this message (include sender channel)
-        for _ in range(channel_count + 1):
+        # retrieve target channels for this message
+        for _ in range(channel_count):
             channel = dgi.get_uint64()
             channels.append(channel)
         
-        if channel_count == 0:
+        if channel_count < 2:
             self.logger.info("No target channels specified, dropping message")
             return
-        elif channel_count == 1 and channels[0] == CONTROL_MESSAGE:
+        elif channel_count == 2 and channels[0] == CONTROL_MESSAGE:
             # message is for us, handle control message
             self.logger.info("Received control message")
             msg_type = dgi.get_uint16()

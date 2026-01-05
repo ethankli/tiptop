@@ -31,7 +31,7 @@ class Participant:
     def subscribe(self, channel: int):
         dg = Datagram()
         # see message routing logic in MessageDirector for internal message format
-        dg.add_uint8(1)
+        dg.add_uint8(2)
         dg.add_uint64(CONTROL_MESSAGE)
         dg.add_uint64(channel)
         dg.add_uint16(CONTROL_SET_CHANNEL)
@@ -40,7 +40,7 @@ class Participant:
     def unsubscribe(self, channel: int):
         dg = Datagram()
         # see message routing logic in MessageDirector for internal message format
-        dg.add_uint8(1)
+        dg.add_uint8(2)
         dg.add_uint64(CONTROL_MESSAGE)
         dg.add_uint64(channel)
         dg.add_uint16(CONTROL_REMOVE_CHANNEL)
