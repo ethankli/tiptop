@@ -82,14 +82,12 @@ class DatagramIterator:
             raise EOFError("Not enough data to read string")
         return raw.decode('utf-8')
     
-    def get_channel(self) -> int:
-        return self.get_uint64()
-    
-    def get_doid(self) -> int:
-        return self.get_uint32()
-    
-    def get_zone(self) -> int:
-        return self.get_uint32()
+    def get_server_header(self) -> tuple[int, int, int, int]:
+        channel_count = self.get_uint8()
+        to_channel = self.get_uint64()
+        from_channel = self.get_uint64()
+        msg_type = self.get_uint16()
+        return (channel_count, to_channel, from_channel, msg_type)
     
     def get_data(self) -> bytes:
         return self.data.read()

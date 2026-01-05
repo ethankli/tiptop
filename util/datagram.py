@@ -56,18 +56,6 @@ class Datagram:
         self.data += struct.pack("<?", data)
         self.update_length()
 
-    def add_channel(self, data: int):
-        self.add_uint64(data)
-        self.update_length()
-
-    def add_doid(self, data: int):
-        self.add_uint32(data)
-        self.update_length()
-
-    def add_zone(self, data: int):
-        self.add_uint32(data)
-        self.update_length()
-
     def add_bytes(self, data: bytes):
         self.data += data
         self.update_length()
@@ -76,6 +64,13 @@ class Datagram:
         encoded = data.encode("utf-8")
         self.add_uint16(len(encoded))
         self.data += encoded
+        self.update_length()
+
+    def add_server_header(self, to_channel: int, from_channel: int, msg_type: int):
+        self.add_uint8(1)  # channel count
+        self.add_uint64(to_channel)
+        self.add_uint64(from_channel)
+        self.add_uint16(msg_type)
         self.update_length()
 
     def get_data(self) -> bytes:
